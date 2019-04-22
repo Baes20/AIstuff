@@ -10,6 +10,8 @@ from FXTMdataset import MarketDataGenerator
 from tensorflow.python.keras.optimizers import *
 from tensorflow.python.keras.callbacks import *
 import matplotlib.pyplot as plt
+from datetime import datetime
+
 
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
@@ -84,20 +86,20 @@ if __name__ == "__main__":
     encoder_layers = [400]
     decoder_layers = [400, input_dim[1] * input_dim[2]]
     batch_size = 32
+    symbol_list = ["EURGBP", "EURUSD", "GBPUSD"]
     epoch = 150
 
     latent_dim = 30
 
-    gen = MarketDataGenerator(0.8, 16, 8, batch_size)
+    gen = MarketDataGenerator(0.8, 16, 8, batch_size, symbol_list, datetime(2019, 4, 20), num_samples=80000)
 
-    trainX = gen.trainX[:-2]
+    trainX = gen.trainX
     print(trainX.shape)
     testX = gen.testX
 
     mfile = '.\SavedModel\VAE/VAE.h5'
     summarydir = ".\Summary\VAE"
-    # there is a warning that it is slow, however, it's ok.
-    # lr_scheduler = LRSchedulerPerEpoch(d_model, 4000, Xtrain.shape[0]/64)  # this scheduler only update lr per epoch
+
     model_saver = ModelCheckpoint(mfile, save_best_only=True, save_weights_only=True)
     tensorboard = TensorBoard(log_dir=summarydir, write_graph=True)
 
@@ -105,15 +107,15 @@ if __name__ == "__main__":
     vae.compile(input_dim, optimizer=Adam(lr=0.001, epsilon=1e-9))
 
     vae.model.fit(trainX, trainX, batch_size=batch_size, epochs=epoch,
-                        validation_data=(testX, testX), callbacks=[model_saver, tensorboard])
+                  validation_data=(gen.validX, gen.validX), callbacks=[model_saver, tensorboard])
 
-    # for i in range(10):
-    #     rand = int(random.uniform(0, len(testX)))
-    #     sample = np.expand_dims(testX[rand], axis=0)
-    #     pred = vae.predict(testX[rand:rand + 1])
-    #     pred = np.reshape(pred, [16, 3])
-    #     plt.plot(testX[rand, :, :, 0])
-    #     plt.plot(pred)
-    #     plt.show()
+    for i in range(10):
+        rand = int(random.uniform(0, len(testX)))
+        sample = np.expand_dims(testX[rand], axis=0)
+        pred = vae.predict(testX[rand:rand + 1])
+        pred = np.reshape(pred, [16, 3])
+        plt.plot(testX[rand, :, :, 0])
+        plt.plot(pred)
+        plt.show()
 
 # EXTREMELY SUCCESSFUL!!

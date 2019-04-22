@@ -120,9 +120,8 @@ class MarketDataGenerator(object):
             y = ys[i]
             data[x, y] = np.mean(data[x - 20:x, y])
 
-    def __init__(self, train_ratio, seq_length, output_count, batch_size):
-        symbol_list = ["EURUSD"]
-        raw_datasets = MT5DataGetter(symbol_list).getcandledata(datetime(2019, 4, 20), 99999, MetaTrader5.MT5_TIMEFRAME_M1)
+    def __init__(self, train_ratio, seq_length, output_count, batch_size, symbol_list, last_date, num_samples=99999):
+        raw_datasets = MT5DataGetter(symbol_list).getcandledata(last_date, num_samples, MetaTrader5.MT5_TIMEFRAME_M1)
         dataset = []
 
         for raw_dataset in raw_datasets:
@@ -132,22 +131,26 @@ class MarketDataGenerator(object):
         dataset = np.stack(dataset, axis=1) # (timesteps, markets, features)
         print(dataset.shape)
 
-        dataset = self.exp_moving_avg(dataset, 10)
+        dataset = self.exp_moving_avg(dataset, 20)
         shape = dataset.shape
         dataset = np.reshape(dataset, [dataset.shape[0], dataset.shape[1] * dataset.shape[2]])
 
         dataset = self.get_delta(dataset)
-        plt.plot(dataset)
-        plt.show()
+
         self.remove_outliers(dataset)
-        plt.plot(dataset)
-        plt.show()
-        dataset = self.normalize_per_symbol(dataset)
-        plt.plot(dataset)
-        plt.show()
-        dataset = np.reshape(dataset, [shape[0], shape[1], shape[2]])
+
+        self.prev_dataset = dataset
+
+        dataset = self.normalize(dataset)
 
         self.og_dataset = dataset
+
+        plt.plot(dataset)
+        plt.show()
+
+        dataset = np.reshape(dataset, [shape[0], shape[1], shape[2]])
+
+
 
         train_size = int(len(dataset) * train_ratio)
 
@@ -167,4 +170,4 @@ class MarketDataGenerator(object):
 
 
 if __name__ == "__main__":
-    test = MarketDataGenerator(0.8, 16, 8, 4)
+    test = MarketDataGenerator(0.8, 16, 8, 4, ["EURUSD"], datetime(2019,4,20),num_samples=10000)
